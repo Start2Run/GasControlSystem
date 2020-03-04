@@ -3,5 +3,10 @@
 		{
 			"path": "."
 		}
-	]
+	],
+	"settings": {
+		"files.associations": {
+			"tcp-client.h": "c"
+		}
+	}
 }
