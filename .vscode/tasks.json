@@ -11,6 +11,7 @@
                 "${fileDirname}/${fileBasenameNoExtension}",
                 "${fileDirname}/lib/tcp-client.c",
                 "${fileDirname}/lib/state-helper.c",
+                "${fileDirname}/lib/pid-controller.c",
                 "-lm",
                 "-pthread"
             ],
