@@ -13,28 +13,6 @@ int                port = 9000;
 char address[24] = "127.0.0.1";
 struct sockaddr_in server_addr = {0};
 
-// int main()
-// {
-// 	char message[24];
-// 	printf("Enter the sever IP address: "); 
-// 	scanf("%s", &address);
-
-// 	printf("Enter port number: "); 
-// 	scanf("%d", &port);
-
-//     if(connectClient(address,port)==-1)
-// 	{
-// 		return -1;
-// 	}
-
-//     printf("\n Enter a message: "); 
-//     scanf("%s", message);
-//     sendMessage(message);
-    
-//     disconnectClient;
-//     return 0;
-// }
-
 int connectClient(char* address, int port)
 {
 	server_addr.sin_family = AF_INET;

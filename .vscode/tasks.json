@@ -10,6 +10,7 @@
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}",
                 "${fileDirname}/lib/tcp-client.c",
+                "${fileDirname}/lib/state-helper.c",
                 "-lm",
                 "-pthread"
             ],
