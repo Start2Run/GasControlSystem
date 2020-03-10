@@ -9,37 +9,36 @@
 #include <semaphore.h> 
 #include "./lib/tcp-client.h"
 #include "./lib/state-helper.h"
-#include "./lib/pid-controller.h"
 
 int main(void)
 {
-    // printf("Enter the sever IP address: "); 
-	// scanf("%s", &address);
+	struct Tcp_Client client_sender;
+	CreateTcpClient(&client_sender);
 
-	// printf("Enter port number: "); 
-	// scanf("%d", &port);
+    printf("Enter the sever IP address: "); 
+	scanf("%s", &client_sender.address);
 
-    // if(connectClient(address,port)==-1)
-	// {
-	// 	return -1;
-	// }
+	printf("Enter port number: "); 
+	scanf("%d", &client_sender.port);
+
+    if(connectClient(&client_sender)==-1)
+	{
+		return -1;
+	}
 		
-	struct ControlModel model1 = GetGazControlState(30);
-	struct ControlModel model2 = GetGazControlState(60);
-	struct ControlModel model3 = GetGazControlState(3);
+	// struct ControlModel model1 = GetGazControlState(30);
+	// struct ControlModel model2 = GetGazControlState(60);
+	// struct ControlModel model3 = GetGazControlState(3);
 
-	Ventilation vent = GetGlobalVentilation(model1,model2,model3);
-	Aeration aer = GetGlobalAertation(model1,model2,model3);
+	// Ventilation vent = GetGlobalVentilation(model1,model2,model3);
+	// Aeration aer = GetGlobalAertation(model1,model2,model3);
 
-	struct PID pid;
-
-	pid_init(&pid);
-
-	double val = 20;
-    for (int i = 0; i < 100; i++) {
-		pid_cal(-40,val,&pid);
-        printf("val:% 7.3f inc:% 7.3f\n", val, pid.output);
-        val += pid.output;
-    }
+	while (1)
+	{
+		char* a;
+		ReadMessage(&client_sender,&a);
+		printf("value is %s", &a);
+	}
+		
     return 0;
 }
