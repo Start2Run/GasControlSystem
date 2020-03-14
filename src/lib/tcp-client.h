@@ -3,6 +3,7 @@
 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <stdbool.h>
 
 extern struct Tcp_Client 
 {
@@ -16,5 +17,5 @@ extern struct Tcp_Client
 int connectClient(struct Tcp_Client *client);
 void sendMessage(char* message, struct Tcp_Client *client);
 int disconnectClient(struct Tcp_Client *client);
-void ReadMessage(struct Tcp_Client *client, char *value);
+void ReadMessageSuccesful(struct Tcp_Client *client, char *array[]);
 #endif

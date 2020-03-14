@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdbool.h>
 #include "tcp-client.h"
 
  #define MAXDATASIZE 100 /* max number of bytes we can get at once */
@@ -57,18 +58,27 @@ void sendMessage(char* message, struct Tcp_Client *client)
 		}
 }
 
-void ReadMessage(struct Tcp_Client *client, char *value)
+void ReadMessageSuccesful(struct Tcp_Client *client, char *array[])
 {
 	int numbytes; 
 	char buf[MAXDATASIZE];
 	numbytes = recv(client->conn_fd, buf, MAXDATASIZE, 0);
 	if ( numbytes== -1) 
-	{     		
+	{     
 		perror("recv");
-        exit(1);
+		exit(1);
 	}	
-	 buf[numbytes] = '\0';
-	 strcpy(value,buf);
+	buf[numbytes] = '\0';
+
+	char delim[] = "\r\n";
+
+	char *ptr = strtok(buf, delim);
+	int i = 0;
+	while (ptr != NULL && i<3)
+	{
+		array[i++] = ptr;
+		ptr = strtok(NULL, delim);
+	}
 }
 
 int disconnectClient(struct Tcp_Client *client)
