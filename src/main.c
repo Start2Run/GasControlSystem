@@ -12,7 +12,7 @@
 #include "./lib/state-helper.h"
 
 int gas1Value, gas2Value, gas3Value = 0;
-pthread_mutex_t lockGasValues;
+pthread_mutex_t lockGasValues,lockSendMessageMutex;
 sem_t timerLockControlCalculSemaphore;
 struct Tcp_Client client_listener, client_sender;
 
@@ -23,6 +23,7 @@ void* TcpListen()
 		char *array[3];
 		ReadMessageSuccesful(&client_listener,array);
 		int i = 0;
+		int gas1,gas2,gas3=100;
 		for (i = 0; i < 3; ++i) 
         {
 			if(array[i]!=NULL)
@@ -30,9 +31,9 @@ void* TcpListen()
 			{
 				char gaseIdentifiant[3]; 
 				char stringValue[3];
-				bool isLG1=strcmp(gaseIdentifiant,"LG1",3)!=0;
-				bool isLG2=strcmp(gaseIdentifiant,"LG2",3)!=0;
-				bool isLG3=strcmp(gaseIdentifiant,"LG3",3)!=0;
+				bool isLG1=strcmp(gaseIdentifiant,"LG1",3) == 0;
+				bool isLG2=strcmp(gaseIdentifiant,"LG2",3) == 0;
+				bool isLG3=strcmp(gaseIdentifiant,"LG3",3) == 0;
 
 				if(getSubString(array[i],gaseIdentifiant,0,2)==-1)
 				{
@@ -51,28 +52,26 @@ void* TcpListen()
 				
 				if(isLG1)
 				{
-					pthread_mutex_lock(&lockGasValues);
-					gas1Value = val;
-					pthread_mutex_unlock(&lockGasValues);
-					//printf("LG1 value is: %d \n",val);
+					gas1 = val;
 				}
 				else if(isLG2)
 				{
-					pthread_mutex_lock(&lockGasValues);
-					gas2Value = val;
-					pthread_mutex_unlock(&lockGasValues);
+					gas2 = val;
 				}
 				else if(isLG3)
 				{
-					pthread_mutex_lock(&lockGasValues);
-					gas3Value = val;
-					pthread_mutex_unlock(&lockGasValues);
+					gas3 = val;
 				}
 				else
 				{
 					continue;
 				}			
 			}
+				pthread_mutex_lock(&lockGasValues);
+					gas1Value = gas1;
+					gas2Value = gas2;
+					gas3Value = gas3;
+				pthread_mutex_unlock(&lockGasValues);
 		}
 	}
 }
@@ -84,18 +83,14 @@ void* ControlCalcul()
 	sem_wait(&timerLockControlCalculSemaphore);
 	pthread_mutex_lock(&lockGasValues);
 	struct ControlModel model1 = GetGazControlState(gas1Value);
-	pthread_mutex_unlock(&lockGasValues);
-	pthread_mutex_lock(&lockGasValues);
 	struct ControlModel model2 = GetGazControlState(gas2Value);
-	pthread_mutex_unlock(&lockGasValues);
-	pthread_mutex_lock(&lockGasValues);
 	struct ControlModel model3 = GetGazControlState(gas3Value);
+
 	pthread_mutex_unlock(&lockGasValues);
 
 	Ventilation vent = GetGlobalVentilation(model1,model2,model3);
 	Aeration aer = GetGlobalAertation(model1,model2,model3);
-	printf("The ventilation is %d \n", (int)vent);
-	printf("The aeration is %d \n", (int)aer);
+	SendControlCommand(vent,aer,model1.gasAnulation,model2.gasAnulation,model3.gasAnulation);
 	}
 }
 
@@ -113,7 +108,7 @@ int main(void)
 	InitiliseTcp();
 
 	pthread_t t1,t2,t3;
-    if(pthread_mutex_init(&lockGasValues, NULL) != 0 )
+    if(pthread_mutex_init(&lockGasValues, NULL) != 0 || pthread_mutex_init(&lockSendMessageMutex, NULL) != 0)
     {
        printf("Mutex initialization failed.\n");
        return 1;
@@ -134,27 +129,28 @@ int main(void)
 void InitiliseTcp()
 {
 	CreateTcpClient(&client_listener);
-	//CreateTcpClient(&client_sender);
-    printf("Enter the sever IP address: "); 
-	//scanf("%s", &client_sender.address);
-
-	printf("Enter port number: "); 
-	//scanf("%d", &client_sender.port);
-
 	strcpy(client_listener.address,"192.168.86.159");
 	client_listener.port=1231;
 
-	// strcpy(client_sender.address,"192.168.86.159");
-	// client_sender.port=1232;
+	
+    //printf("Enter the sever IP address: "); 
+	//scanf("%s", &client_sender.address);
+
+	//printf("Enter port number: "); 
+	//scanf("%d", &client_sender.port);
+
+	CreateTcpClient(&client_sender);
+	strcpy(client_sender.address,"192.168.86.159");
+	client_sender.port=1232;
     
 	if(connectClient(&client_listener)==-1)
 	{
 		return -1;
 	}
-	// if(connectClient(&client_sender)==-1)
-	// {
-	// 	return -1;
-	// }
+	if(connectClient(&client_sender)==-1)
+	{
+		return -1;
+	}
 }
 
 /*Function definition*/
@@ -184,4 +180,30 @@ int  getSubString(char *source, char *target,int from, int to)
 	target[j]='\0'; 
 	
 	return 0;	
+}
+
+void SendControlCommand(Ventilation vent, Aeration aer, bool gas1InjectionON, bool gas2InjectionON, bool gas3InjectionON)
+{
+	// Build message
+
+    char message[100]={0x0};
+	
+	strcat(message, gas1InjectionON ? "IG1":"AIG1");
+    strcat(message,"\n");
+	strcat(message, gas2InjectionON ? "IG2":"AIG2");
+    strcat(message,"\n");
+	strcat(message, gas3InjectionON ? "IG3":"AIG3");
+ 	strcat(message,"\n");
+
+	printf("\n message \n %s \n",message);
+
+	pthread_mutex_lock(&lockGasValues);
+		printf("\n gaz1 - %d; gaz2 - %d; gaz3 - %d \n",gas1Value,gas2Value,gas3Value);
+	pthread_mutex_unlock(&lockGasValues);
+
+	pthread_mutex_lock(&lockSendMessageMutex);
+       sendMessage(message, &client_sender);
+    pthread_mutex_unlock(&lockSendMessageMutex);
+	//Clear message
+    memset(message, 0, strlen(message));
 }
