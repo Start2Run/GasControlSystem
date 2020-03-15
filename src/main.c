@@ -23,7 +23,7 @@ void* TcpListen()
 		char *array[3];
 		ReadMessageSuccesful(&client_listener,array);
 		int i = 0;
-		int gas1,gas2,gas3=100;
+		int gas1,gas2,gas3 = 1;
 		for (i = 0; i < 3; ++i) 
         {
 			if(array[i]!=NULL)
@@ -31,14 +31,15 @@ void* TcpListen()
 			{
 				char gaseIdentifiant[3]; 
 				char stringValue[3];
-				bool isLG1=strcmp(gaseIdentifiant,"LG1",3) == 0;
-				bool isLG2=strcmp(gaseIdentifiant,"LG2",3) == 0;
-				bool isLG3=strcmp(gaseIdentifiant,"LG3",3) == 0;
-
+				
 				if(getSubString(array[i],gaseIdentifiant,0,2)==-1)
 				{
 					continue;
 				}
+				bool isLG1=strcmp(gaseIdentifiant,"LG1",3) == 0;
+				bool isLG2=strcmp(gaseIdentifiant,"LG2",3) == 0;
+				bool isLG3=strcmp(gaseIdentifiant,"LG3",3) == 0;
+
 				if(!isLG1 && !isLG2 && !isLG3)
 				{
 					continue;
@@ -67,12 +68,12 @@ void* TcpListen()
 					continue;
 				}			
 			}
-				pthread_mutex_lock(&lockGasValues);
-					gas1Value = gas1;
-					gas2Value = gas2;
-					gas3Value = gas3;
-				pthread_mutex_unlock(&lockGasValues);
 		}
+		pthread_mutex_lock(&lockGasValues);
+			gas1Value = gas1;
+			gas2Value = gas2;
+			gas3Value = gas3;
+		pthread_mutex_unlock(&lockGasValues);
 	}
 }
 
@@ -90,7 +91,7 @@ void* ControlCalcul()
 
 	Ventilation vent = GetGlobalVentilation(model1,model2,model3);
 	Aeration aer = GetGlobalAertation(model1,model2,model3);
-	SendControlCommand(vent,aer,model1.gasAnulation,model2.gasAnulation,model3.gasAnulation);
+	SendControlCommand(aer, vent, model1.GasInjection, model2.GasInjection, model3.GasInjection);
 	}
 }
 
@@ -99,7 +100,7 @@ void* Timer()
     while(1)
     {
         sem_post(&timerLockControlCalculSemaphore);
-        sleep(1);
+        usleep(1000);
     }
 }
 
@@ -182,24 +183,27 @@ int  getSubString(char *source, char *target,int from, int to)
 	return 0;	
 }
 
-void SendControlCommand(Ventilation vent, Aeration aer, bool gas1InjectionON, bool gas2InjectionON, bool gas3InjectionON)
+void SendControlCommand(Aeration aer, Ventilation vent, GasInjection gas1Injection, GasInjection gas2Injection, GasInjection gas3Injection)
 {
 	// Build message
 
     char message[100]={0x0};
 	
-	strcat(message, gas1InjectionON ? "IG1":"AIG1");
-    strcat(message,"\n");
-	strcat(message, gas2InjectionON ? "IG2":"AIG2");
-    strcat(message,"\n");
-	strcat(message, gas3InjectionON ? "IG3":"AIG3");
+	strcat(message, AerationStrings[(int)aer]);
  	strcat(message,"\n");
-
-	printf("\n message \n %s \n",message);
-
-	pthread_mutex_lock(&lockGasValues);
-		printf("\n gaz1 - %d; gaz2 - %d; gaz3 - %d \n",gas1Value,gas2Value,gas3Value);
-	pthread_mutex_unlock(&lockGasValues);
+	strcat(message, VentilationStrings[(int)vent]);
+	strcat(message,"\n");
+	strcat(message, GazInjectionStrings[(int)gas1Injection]);
+	strcat(message, "1");
+ 	strcat(message,"\n");
+	strcat(message, GazInjectionStrings[(int)gas2Injection]);
+	strcat(message, "2");
+	strcat(message,"\n");
+	strcat(message, GazInjectionStrings[(int)gas3Injection]);
+	strcat(message, "3");
+	strcat(message,"\n");
+	
+	//printf("\n message \n %s \n",message);
 
 	pthread_mutex_lock(&lockSendMessageMutex);
        sendMessage(message, &client_sender);
