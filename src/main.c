@@ -91,7 +91,7 @@ void* ControlCalcul()
 
 	Ventilation vent = GetGlobalVentilation(model1,model2,model3);
 	Aeration aer = GetGlobalAertation(model1,model2,model3);
-	SendControlCommand(aer, vent, model1.GasInjection, model2.GasInjection, model3.GasInjection);
+	SendControlCommand(aer, vent, model1, model2, model3);
 	}
 }
 
@@ -100,7 +100,7 @@ void* Timer()
     while(1)
     {
         sem_post(&timerLockControlCalculSemaphore);
-        usleep(1000);
+        usleep(100);
     }
 }
 
@@ -130,19 +130,19 @@ int main(void)
 void InitiliseTcp()
 {
 	CreateTcpClient(&client_listener);
-	strcpy(client_listener.address,"192.168.86.159");
-	client_listener.port=1231;
-
-	
-    //printf("Enter the sever IP address: "); 
-	//scanf("%s", &client_sender.address);
-
-	//printf("Enter port number: "); 
-	//scanf("%d", &client_sender.port);
-
 	CreateTcpClient(&client_sender);
-	strcpy(client_sender.address,"192.168.86.159");
-	client_sender.port=1232;
+
+    printf("Enter the sever IP address: "); 
+	scanf("%s", &client_sender.address);
+	
+	strcpy(client_listener.address, client_sender.address);
+
+	printf("Enter the listener port: "); 
+	scanf("%d", &client_listener.port);
+
+	printf("Enter the sender port: "); 
+	scanf("%d", &client_sender.port);
+
     
 	if(connectClient(&client_listener)==-1)
 	{
@@ -183,27 +183,34 @@ int  getSubString(char *source, char *target,int from, int to)
 	return 0;	
 }
 
-void SendControlCommand(Aeration aer, Ventilation vent, GasInjection gas1Injection, GasInjection gas2Injection, GasInjection gas3Injection)
+void SendControlCommand(Aeration aer, Ventilation vent, struct ControlModel gas1Model, struct ControlModel gas2Model, struct ControlModel gas3Model)
 {
 	// Build message
 
     char message[100]={0x0};
-	
+
+	strcat(message, "AG1");
+	strcat(message, AlarmStrings[(int)gas1Model.alarm]);
+	strcat(message,"\n");
+	strcat(message, "AG2");
+	strcat(message, AlarmStrings[(int)gas2Model.alarm]);
+	strcat(message,"\n");
+	strcat(message, "AG3");
+	strcat(message, AlarmStrings[(int)gas3Model.alarm]);
+	strcat(message,"\n");
 	strcat(message, AerationStrings[(int)aer]);
  	strcat(message,"\n");
 	strcat(message, VentilationStrings[(int)vent]);
 	strcat(message,"\n");
-	strcat(message, GazInjectionStrings[(int)gas1Injection]);
+	strcat(message, GazInjectionStrings[(int)gas1Model.GasInjection]);
 	strcat(message, "1");
  	strcat(message,"\n");
-	strcat(message, GazInjectionStrings[(int)gas2Injection]);
+	strcat(message, GazInjectionStrings[(int)gas2Model.GasInjection]);
 	strcat(message, "2");
 	strcat(message,"\n");
-	strcat(message, GazInjectionStrings[(int)gas3Injection]);
+	strcat(message, GazInjectionStrings[(int)gas3Model.GasInjection]);
 	strcat(message, "3");
 	strcat(message,"\n");
-	
-	//printf("\n message \n %s \n",message);
 
 	pthread_mutex_lock(&lockSendMessageMutex);
        sendMessage(message, &client_sender);
