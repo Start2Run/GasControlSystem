@@ -8,6 +8,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <semaphore.h> 
+#include <arpa/inet.h>
 #include "./lib/tcp-client.h"
 #include "./lib/state-helper.h"
 
@@ -100,7 +101,7 @@ void* Timer()
     while(1)
     {
         sem_post(&timerLockControlCalculSemaphore);
-        usleep(100);
+        usleep(500);
     }
 }
 
